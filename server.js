@@ -7,6 +7,7 @@ const session = require('express-session');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const qs = require('qs');
 
 dotenv.config();
 
@@ -150,14 +151,20 @@ app.get('/api/tiktok/callback', async (req, res) => {
     let tokenResponse;
 
     try {
-      tokenResponse = await axios.post(tokenUrl, {
-        client_key: TIKTOK_CONFIG.clientKey,
-        client_secret: TIKTOK_CONFIG.clientSecret,
-        code,
-        grant_type: 'authorization_code',
-      }, {
-        timeout: 10000,
-      });
+      tokenResponse = await axios.post(tokenUrl,
+        qs.stringify({
+          client_key: TIKTOK_CONFIG.clientKey,
+          client_secret: TIKTOK_CONFIG.clientSecret,
+          code,
+          grant_type: 'authorization_code',
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          timeout: 10000,
+        }
+      );
     } catch (axiosError) {
       console.error('❌ Axios error details:');
       console.error(`   Code: ${axiosError.code}`);
@@ -435,11 +442,16 @@ async function refreshTokenIfNeeded(session) {
     try {
       const refreshResponse = await axios.post(
         `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`,
-        {
+        qs.stringify({
           client_key: TIKTOK_CONFIG.clientKey,
           client_secret: TIKTOK_CONFIG.clientSecret,
           grant_type: 'refresh_token',
           refresh_token: session.user.refreshToken,
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         }
       );
 

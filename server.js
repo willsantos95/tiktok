@@ -143,15 +143,31 @@ app.get('/api/tiktok/callback', async (req, res) => {
 
     // Exchange code for access token
     console.log('🔑 Exchanging code for access token...');
-    const tokenResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`,
-      {
+    console.log(`   API Base URL: ${TIKTOK_CONFIG.apiBaseUrl}`);
+    console.log(`   Token endpoint: ${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`);
+
+    const tokenUrl = `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`;
+    let tokenResponse;
+
+    try {
+      tokenResponse = await axios.post(tokenUrl, {
         client_key: TIKTOK_CONFIG.clientKey,
         client_secret: TIKTOK_CONFIG.clientSecret,
         code,
         grant_type: 'authorization_code',
+      }, {
+        timeout: 10000,
+      });
+    } catch (axiosError) {
+      console.error('❌ Axios error details:');
+      console.error(`   Code: ${axiosError.code}`);
+      console.error(`   Message: ${axiosError.message}`);
+      if (axiosError.response) {
+        console.error(`   Status: ${axiosError.response.status}`);
+        console.error(`   Data: ${JSON.stringify(axiosError.response.data)}`);
       }
-    );
+      throw axiosError;
+    }
 
     console.log('✅ Access token received');
     const { access_token, refresh_token, expires_in, open_id } = tokenResponse.data;
@@ -432,11 +448,42 @@ async function refreshTokenIfNeeded(session) {
 }
 
 // ============================================
-// HEALTH CHECK & STATIC FILES
+// HEALTH CHECK & DIAGNOSTICS
 // ============================================
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date() });
+});
+
+// Network connectivity test
+app.get('/api/test-tiktok-connection', async (req, res) => {
+  try {
+    console.log(`🔍 Testing connection to: ${TIKTOK_CONFIG.apiBaseUrl}`);
+
+    const testUrl = `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`;
+    const response = await axios.post(testUrl, {
+      client_key: 'test',
+      client_secret: 'test',
+      grant_type: 'authorization_code',
+    }, {
+      timeout: 5000,
+    });
+
+    res.json({
+      status: 'connected',
+      endpoint: testUrl,
+      timestamp: new Date()
+    });
+  } catch (error) {
+    console.error('❌ Connection test failed:', error.message);
+    res.status(500).json({
+      status: 'disconnected',
+      error: error.message,
+      endpoint: `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`,
+      code: error.code,
+      timestamp: new Date()
+    });
+  }
 });
 
 // Serve static files

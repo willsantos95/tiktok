@@ -41,7 +41,7 @@ const TIKTOK_CONFIG = {
   clientSecret: process.env.TIKTOK_CLIENT_SECRET,
   redirectUri: process.env.TIKTOK_REDIRECT_URI,
   apiBaseUrl: process.env.TIKTOK_API_BASE_URL || 'https://open.tiktokapis.com',
-  authorizationUrl: 'https://www.tiktok.com/v1/oauth/authorize/',
+  authorizationUrl: 'https://www.tiktok.com/v1/oauth/authorize',
 };
 
 // ============================================
@@ -64,17 +64,32 @@ app.get('/api/tiktok/auth-url', (req, res) => {
   authUrl.searchParams.append('redirect_uri', TIKTOK_CONFIG.redirectUri);
   authUrl.searchParams.append('state', state);
 
-  res.json({ authUrl: authUrl.toString() });
+  const authUrlString = authUrl.toString();
+  console.log('🔐 OAuth Auth URL Generated:');
+  console.log(`   Client Key: ${TIKTOK_CONFIG.clientKey}`);
+  console.log(`   Redirect URI: ${TIKTOK_CONFIG.redirectUri}`);
+  console.log(`   Auth URL: ${authUrlString}`);
+
+  res.json({ authUrl: authUrlString });
 });
 
 // 2. OAuth callback handler (GET - TikTok redirects here)
 app.get('/api/tiktok/callback', async (req, res) => {
   try {
-    const { code, state, error } = req.query;
+    const { code, state, error, error_description } = req.query;
+
+    console.log('🔄 OAuth Callback Received:');
+    console.log(`   URL: ${req.originalUrl}`);
+    console.log(`   Code: ${code ? 'present' : 'missing'}`);
+    console.log(`   State: ${state ? 'present' : 'missing'}`);
+    if (error) console.log(`   Error: ${error}`);
+    if (error_description) console.log(`   Error Description: ${error_description}`);
 
     // Check for TikTok error
     if (error) {
-      return res.redirect('/login.html?error=' + encodeURIComponent(error));
+      const errorMsg = error_description || error;
+      console.log(`❌ OAuth Error from TikTok: ${errorMsg}`);
+      return res.redirect('/login.html?error=' + encodeURIComponent(errorMsg));
     }
 
     // Validate code and state
@@ -88,6 +103,7 @@ app.get('/api/tiktok/callback', async (req, res) => {
     }
 
     // Exchange code for access token
+    console.log('🔑 Exchanging code for access token...');
     const tokenResponse = await axios.post(
       `${TIKTOK_CONFIG.apiBaseUrl}/v1/oauth/token/`,
       {
@@ -98,9 +114,11 @@ app.get('/api/tiktok/callback', async (req, res) => {
       }
     );
 
+    console.log('✅ Access token received');
     const { access_token, refresh_token, expires_in, open_id } = tokenResponse.data;
 
     // Get user info
+    console.log('👤 Fetching user information...');
     const userResponse = await axios.get(
       `${TIKTOK_CONFIG.apiBaseUrl}/v1/user/info/?fields=open_id,union_id,avatar_url,display_name`,
       {
@@ -111,6 +129,7 @@ app.get('/api/tiktok/callback', async (req, res) => {
     );
 
     const userData = userResponse.data.data;
+    console.log(`✅ User info retrieved: ${userData.display_name}`);
 
     // Store in session
     req.session.user = {
@@ -121,6 +140,8 @@ app.get('/api/tiktok/callback', async (req, res) => {
       refreshToken: refresh_token,
       expiresAt: new Date(Date.now() + expires_in * 1000),
     };
+
+    console.log('🎉 OAuth flow completed successfully');
 
     req.session.save((err) => {
       if (err) {

@@ -157,7 +157,10 @@ app.get('/api/tiktok/callback', async (req, res) => {
       params.append('code', code);
       params.append('grant_type', 'authorization_code');
 
-      tokenResponse = await axios.post(tokenUrl, params, {
+      const paramsString = params.toString();
+      console.log(`   Params string: ${paramsString.substring(0, 100)}...`);
+
+      tokenResponse = await axios.post(tokenUrl, paramsString, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -444,9 +447,11 @@ async function refreshTokenIfNeeded(session) {
       params.append('grant_type', 'refresh_token');
       params.append('refresh_token', session.user.refreshToken);
 
+      const paramsString = params.toString();
+
       const refreshResponse = await axios.post(
         `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`,
-        params,
+        paramsString,
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

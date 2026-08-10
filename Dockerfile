@@ -1,5 +1,5 @@
 # Multi-stage: Node.js + Nginx in one container
-FROM node:22-alpine as builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -16,7 +16,6 @@ WORKDIR /app
 # Copy Node.js files
 COPY package*.json ./
 COPY server.js ./
-COPY .env.example ./.env
 
 # Copy Nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf

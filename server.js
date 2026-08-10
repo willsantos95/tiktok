@@ -41,7 +41,7 @@ const TIKTOK_CONFIG = {
   clientSecret: process.env.TIKTOK_CLIENT_SECRET,
   redirectUri: process.env.TIKTOK_REDIRECT_URI,
   apiBaseUrl: process.env.TIKTOK_API_BASE_URL || 'https://open.tiktokapis.com',
-  authorizationUrl: 'https://www.tiktok.com/v1/oauth/authorize',
+  authorizationUrl: 'https://www.tiktok.com/v2/auth/authorize/',
 };
 
 // ============================================
@@ -105,7 +105,7 @@ app.get('/api/tiktok/callback', async (req, res) => {
     // Exchange code for access token
     console.log('🔑 Exchanging code for access token...');
     const tokenResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/oauth/token/`,
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`,
       {
         client_key: TIKTOK_CONFIG.clientKey,
         client_secret: TIKTOK_CONFIG.clientSecret,
@@ -370,7 +370,7 @@ async function refreshTokenIfNeeded(session) {
   if (now.getTime() > expiresAt.getTime() - 5 * 60 * 1000) {
     try {
       const refreshResponse = await axios.post(
-        `${TIKTOK_CONFIG.apiBaseUrl}/v1/oauth/token/`,
+        `${TIKTOK_CONFIG.apiBaseUrl}/v2/oauth/token/`,
         {
           client_key: TIKTOK_CONFIG.clientKey,
           client_secret: TIKTOK_CONFIG.clientSecret,

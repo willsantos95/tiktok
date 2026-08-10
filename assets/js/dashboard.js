@@ -260,32 +260,45 @@ const Dashboard = {
     }
   },
 
-  // Simulate draft upload to TikTok
+  // Upload draft to TikTok
   async simulateDraftUpload(file, caption) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate random success/fail for demo
-        if (Math.random() > 0.1) {
-          resolve();
-        } else {
-          reject(new Error('Network error. Please try again.'));
-        }
-      }, 3000);
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('caption', caption);
+
+    const response = await fetch('/api/tiktok/upload-draft', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.details || error.error || 'Upload failed');
+    }
+
+    return response.json();
   },
 
-  // Simulate publish to TikTok
+  // Publish video to TikTok
   async simulatePublish(file, caption, hashtags) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate random success/fail for demo
-        if (Math.random() > 0.1) {
-          resolve();
-        } else {
-          reject(new Error('Publishing error. Please try again.'));
-        }
-      }, 4000);
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('caption', caption);
+    formData.append('hashtags', hashtags);
+
+    const response = await fetch('/api/tiktok/publish', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.details || error.error || 'Publishing failed');
+    }
+
+    return response.json();
   },
 
   // Show status message

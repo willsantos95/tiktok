@@ -1,13 +1,8 @@
 // TikTok Authentication Handler
 
-// Configuration - Replace with your actual TikTok API credentials
-const TIKTOK_CONFIG = {
-  CLIENT_ID: 'YOUR_CLIENT_ID',
-  REDIRECT_URI: window.location.origin + '/dashboard.html',
-  SCOPES: ['user.info.basic', 'video.upload', 'video.publish'],
-  AUTHORIZE_URL: 'https://www.tiktok.com/v1/oauth/authorize/',
-  TOKEN_URL: 'https://open.tiktokapis.com/v1/oauth/token/',
-};
+// Configuration - Backend will handle OAuth flow
+const API_BASE_URL = window.location.origin;
+const TIKTOK_SCOPES = ['user.info.basic', 'video.upload', 'video.publish'];
 
 // Session Management
 const TikTokAuth = {
@@ -56,29 +51,43 @@ const TikTokAuth = {
   },
 
   // Check authentication status and redirect if needed
-  checkAuthStatus() {
+  async checkAuthStatus() {
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
     const isOnDashboard = currentPage === 'dashboard.html';
     const isOnLogin = currentPage === 'login.html';
 
-    if (this.isAuthenticated()) {
-      // User is authenticated
-      this.updateUIForAuthenticated();
+    try {
+      // Check with backend
+      const response = await fetch(`${API_BASE_URL}/api/tiktok/user`, {
+        credentials: 'include',
+      });
 
-      // If on login page, redirect to dashboard
-      if (isOnLogin) {
-        setTimeout(() => {
-          window.location.href = './dashboard.html';
-        }, 500);
+      if (response.ok) {
+        const data = await response.json();
+        // User is authenticated
+        this.updateUIForAuthenticated(data.user);
+
+        // If on login page, redirect to dashboard
+        if (isOnLogin) {
+          setTimeout(() => {
+            window.location.href = './dashboard.html';
+          }, 500);
+        }
+      } else {
+        // User is not authenticated
+        this.updateUIForUnauthenticated();
+
+        // If on dashboard, redirect to login
+        if (isOnDashboard) {
+          setTimeout(() => {
+            window.location.href = './login.html';
+          }, 500);
+        }
       }
-
-      // Handle OAuth callback
-      this.handleOAuthCallback();
-    } else {
-      // User is not authenticated
+    } catch (error) {
+      console.error('Auth check error:', error);
       this.updateUIForUnauthenticated();
 
-      // If on dashboard, redirect to login
       if (isOnDashboard) {
         setTimeout(() => {
           window.location.href = './login.html';
@@ -88,14 +97,13 @@ const TikTokAuth = {
   },
 
   // Update UI for authenticated user
-  updateUIForAuthenticated() {
-    const userInfo = this.getUserInfo();
+  updateUIForAuthenticated(userInfo) {
     if (!userInfo) return;
 
     // Update username displays
     const usernameElements = document.querySelectorAll('#user-name, #tiktok-username');
     usernameElements.forEach(el => {
-      el.textContent = '@' + userInfo.username;
+      el.textContent = userInfo.displayName || '@user';
     });
 
     // Show logout button
@@ -114,44 +122,33 @@ const TikTokAuth = {
   },
 
   // Initiate TikTok login
-  initiateLogin() {
-    // For demo purposes, we'll simulate OAuth flow
-    // In production, redirect to TikTok OAuth endpoint:
-    // const authUrl = `${TIKTOK_CONFIG.AUTHORIZE_URL}?client_key=${TIKTOK_CONFIG.CLIENT_ID}&response_type=code&scope=${TIKTOK_CONFIG.SCOPES.join(',')}&redirect_uri=${encodeURIComponent(TIKTOK_CONFIG.REDIRECT_URI)}`;
-    // window.location.href = authUrl;
+  async initiateLogin() {
+    try {
+      const loginBtn = document.getElementById('tiktok-login-btn');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Connecting to TikTok...';
+      }
 
-    // Demo flow - simulate OAuth callback
-    this.simulateOAuthFlow();
-  },
+      // Get authorization URL from backend
+      const response = await fetch(`${API_BASE_URL}/api/tiktok/auth-url`);
+      const data = await response.json();
 
-  // Simulate OAuth flow for demo (remove in production)
-  simulateOAuthFlow() {
-    const loginBtn = document.getElementById('tiktok-login-btn');
-    if (loginBtn) {
-      loginBtn.disabled = true;
-      loginBtn.textContent = 'Connecting to TikTok...';
+      if (data.authUrl) {
+        // Redirect to TikTok OAuth
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error('Failed to get authorization URL');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Failed to initiate login. Please try again.');
+      const loginBtn = document.getElementById('tiktok-login-btn');
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login with TikTok';
+      }
     }
-
-    // Simulate API call delay
-    setTimeout(() => {
-      // Demo user data
-      const demoUserData = {
-        open_id: 'demo_user_' + Math.random().toString(36).substr(2, 9),
-        username: 'demo_creator_' + Math.floor(Math.random() * 10000),
-        display_name: 'Demo Creator Account',
-      };
-
-      // Simulate access token
-      const demoToken = 'demo_token_' + Math.random().toString(36).substr(2, 9);
-
-      // Store in localStorage
-      localStorage.setItem('tiktok_access_token', demoToken);
-      localStorage.setItem('tiktok_user_info', JSON.stringify(demoUserData));
-      localStorage.setItem('tiktok_token_expires_at', new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString());
-
-      // Redirect to dashboard
-      window.location.href = './dashboard.html';
-    }, 1500);
   },
 
   // Handle OAuth callback from TikTok
@@ -193,8 +190,18 @@ const TikTokAuth = {
   },
 
   // Logout user
-  logout() {
+  async logout() {
     if (confirm('Are you sure you want to logout?')) {
+      try {
+        await fetch(`${API_BASE_URL}/api/tiktok/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+
+      // Clear local storage
       localStorage.removeItem('tiktok_access_token');
       localStorage.removeItem('tiktok_user_info');
       localStorage.removeItem('tiktok_token_expires_at');
@@ -206,30 +213,7 @@ const TikTokAuth = {
 
   // Disconnect TikTok account
   disconnect() {
-    if (confirm('Are you sure you want to disconnect your TikTok account? This action will revoke all permissions.')) {
-      // In production, call TikTok API to revoke access
-      this.revokeAccess();
-    }
-  },
-
-  // Revoke TikTok access
-  async revokeAccess() {
-    try {
-      const token = this.getAccessToken();
-      // Call your backend to revoke the token
-      await fetch('/api/tiktok/revoke', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_token: token }),
-      });
-
-      // Clear local storage
-      this.logout();
-    } catch (error) {
-      console.error('Error revoking access:', error);
-      // Still logout even if revoke fails
-      this.logout();
-    }
+    this.logout();
   },
 
   // Refresh access token if expired

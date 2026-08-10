@@ -156,6 +156,7 @@ app.get('/api/tiktok/callback', async (req, res) => {
       params.append('client_secret', TIKTOK_CONFIG.clientSecret);
       params.append('code', code);
       params.append('grant_type', 'authorization_code');
+      params.append('redirect_uri', TIKTOK_CONFIG.redirectUri);
 
       const paramsString = params.toString();
       console.log(`   Params string: ${paramsString.substring(0, 100)}...`);

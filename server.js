@@ -66,14 +66,24 @@ app.get('/api/tiktok/auth-url', (req, res) => {
   res.json({ authUrl: authUrl.toString() });
 });
 
-// 2. OAuth callback handler
-app.post('/api/tiktok/callback', async (req, res) => {
+// 2. OAuth callback handler (GET - TikTok redirects here)
+app.get('/api/tiktok/callback', async (req, res) => {
   try {
-    const { code, state } = req.body;
+    const { code, state, error } = req.query;
 
-    // Validate state
+    // Check for TikTok error
+    if (error) {
+      return res.redirect('/login.html?error=' + encodeURIComponent(error));
+    }
+
+    // Validate code and state
+    if (!code || !state) {
+      return res.redirect('/login.html?error=missing_parameters');
+    }
+
+    // Validate state (CSRF protection)
     if (state !== req.session.oauthState) {
-      return res.status(400).json({ error: 'Invalid state parameter' });
+      return res.redirect('/login.html?error=invalid_state');
     }
 
     // Exchange code for access token
@@ -110,19 +120,19 @@ app.post('/api/tiktok/callback', async (req, res) => {
       refreshToken: refresh_token,
       expiresAt: new Date(Date.now() + expires_in * 1000),
     };
-    req.session.save();
 
-    res.json({
-      success: true,
-      user: req.session.user,
-      accessToken: access_token,
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.redirect('/login.html?error=session_save_failed');
+      }
+
+      // Redirect to dashboard after successful authentication
+      res.redirect('/dashboard.html');
     });
   } catch (error) {
     console.error('OAuth callback error:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Authentication failed',
-      details: error.response?.data || error.message,
-    });
+    res.redirect('/login.html?error=' + encodeURIComponent(error.response?.data?.error_description || error.message));
   }
 });
 

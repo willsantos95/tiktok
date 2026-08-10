@@ -8,8 +8,36 @@ const TIKTOK_SCOPES = ['user.info.basic', 'video.upload', 'video.publish'];
 const TikTokAuth = {
   // Initialize authentication
   init() {
+    this.checkForOAuthErrors();
     this.checkAuthStatus();
     this.setupEventListeners();
+  },
+
+  // Check for OAuth errors in URL
+  checkForOAuthErrors() {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+
+    if (error) {
+      console.error('OAuth error:', error);
+      const errorMsg = this.getErrorMessage(error);
+      alert('Login failed: ' + errorMsg);
+
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  },
+
+  // Get user-friendly error message
+  getErrorMessage(error) {
+    const messages = {
+      'invalid_state': 'Security validation failed. Please try again.',
+      'missing_parameters': 'Missing authorization parameters. Please try again.',
+      'session_save_failed': 'Session error. Please try again.',
+      'access_denied': 'Authorization was denied. Please try again.',
+      'temporarily_unavailable': 'TikTok service is temporarily unavailable.',
+    };
+    return messages[error] || error;
   },
 
   // Setup event listeners

@@ -36,12 +36,14 @@ const upload = multer({
 });
 
 // TikTok API configuration
+const TIKTOK_SANDBOX = process.env.TIKTOK_SANDBOX === 'true';
 const TIKTOK_CONFIG = {
   clientKey: process.env.TIKTOK_CLIENT_KEY,
   clientSecret: process.env.TIKTOK_CLIENT_SECRET,
   redirectUri: process.env.TIKTOK_REDIRECT_URI,
-  apiBaseUrl: process.env.TIKTOK_API_BASE_URL || 'https://open.tiktokapis.com',
+  apiBaseUrl: process.env.TIKTOK_API_BASE_URL || (TIKTOK_SANDBOX ? 'https://open-sandbox.tiktokapis.com' : 'https://open.tiktokapis.com'),
   authorizationUrl: 'https://www.tiktok.com/v2/auth/authorize/',
+  sandbox: TIKTOK_SANDBOX,
 };
 
 // ============================================
@@ -422,6 +424,8 @@ app.listen(PORT, () => {
   console.log(`🚀 TikTok Video Publishing Backend`);
   console.log(`📍 Running on ${APP_URL}`);
   console.log(`🔐 TikTok OAuth configured`);
+  console.log(`${TIKTOK_SANDBOX ? '🧪 MODE: SANDBOX' : '🌐 MODE: PRODUCTION'}`);
+  console.log(`🌐 API Base URL: ${TIKTOK_CONFIG.apiBaseUrl}`);
   console.log(`📤 Upload endpoint: POST /api/tiktok/upload-draft`);
   console.log(`🚀 Publish endpoint: POST /api/tiktok/publish`);
 });

@@ -172,10 +172,15 @@ app.get('/api/tiktok/callback', async (req, res) => {
     console.log('✅ Access token received');
     const { access_token, refresh_token, expires_in, open_id } = tokenResponse.data;
 
+    console.log(`   Token length: ${access_token ? access_token.length : 0} chars`);
+    console.log(`   Expires in: ${expires_in} seconds`);
+    console.log(`   Open ID: ${open_id}`);
+
     // Get user info
     console.log('👤 Fetching user information...');
     const userInfoUrl = `${TIKTOK_CONFIG.apiBaseUrl}/v2/user/info/?fields=open_id,union_id,avatar_url,display_name`;
     console.log(`   Endpoint: ${userInfoUrl}`);
+    console.log(`   Authorization header: Bearer ${access_token ? access_token.substring(0, 20) + '...' : 'MISSING'}`);
 
     const userResponse = await axios.get(userInfoUrl, {
       headers: {

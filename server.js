@@ -261,23 +261,33 @@ app.post('/api/tiktok/upload-draft', upload.single('video'), async (req, res) =>
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { caption } = req.body;
+    const { caption, privacyLevel, disableDuet, disableComment, disableStitch } = req.body;
     const videoFile = req.file;
 
     if (!videoFile) {
       return res.status(400).json({ error: 'No video file provided' });
     }
 
+    console.log('📤 Draft Upload Started');
+    console.log(`   Caption: ${caption}`);
+    console.log(`   Privacy Level: ${privacyLevel}`);
+    console.log(`   Disable Duet: ${disableDuet}`);
+    console.log(`   Disable Comment: ${disableComment}`);
+    console.log(`   Disable Stitch: ${disableStitch}`);
+
     // Check token expiration and refresh if needed
     await refreshTokenIfNeeded(req.session);
 
     // Initialize video upload
+    const fileSize = fs.statSync(videoFile.path).size;
+    console.log(`   File Size: ${(fileSize / 1024 / 1024).toFixed(2)}MB`);
+
     const initUploadResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/video/upload/init/`,
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/post/publish/video/init/`,
       {
         source_info: {
           source: 'FILE_UPLOAD',
-          chunk_size: fs.statSync(videoFile.path).size,
+          chunk_size: fileSize,
         },
       },
       {
@@ -288,11 +298,12 @@ app.post('/api/tiktok/upload-draft', upload.single('video'), async (req, res) =>
     );
 
     const uploadToken = initUploadResponse.data.data.upload_token;
+    console.log(`✅ Upload token received: ${uploadToken.substring(0, 20)}...`);
 
     // Upload video chunks
     const videoBuffer = fs.readFileSync(videoFile.path);
-    const chunkUploadResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/video/upload/parts/`,
+    await axios.post(
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/post/publish/video/upload/`,
       videoBuffer,
       {
         headers: {
@@ -306,13 +317,26 @@ app.post('/api/tiktok/upload-draft', upload.single('video'), async (req, res) =>
       }
     );
 
-    // Finalize upload
+    console.log('✅ Video chunk uploaded');
+
+    // Finalize upload with privacy options
+    const postInfo = {
+      title: caption || 'Video',
+      privacy_level: privacyLevel || 'SELF_ONLY',
+      disable_duet: disableDuet === 'true' || disableDuet === true,
+      disable_comment: disableComment === 'true' || disableComment === true,
+      disable_stitch: disableStitch === 'true' || disableStitch === true,
+      video_cover_timestamp_ms: 1000,
+    };
+
+    console.log('📝 Post Info:', postInfo);
+
     const finalizeResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/video/upload/finish/`,
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/post/publish/video/finish/`,
       {
         upload_token: uploadToken,
-        publish_type: 'DRAFT', // Upload as draft
-        description: caption || '',
+        publish_type: 'DRAFT',
+        post_info: postInfo,
       },
       {
         headers: {
@@ -324,13 +348,15 @@ app.post('/api/tiktok/upload-draft', upload.single('video'), async (req, res) =>
     // Clean up uploaded file
     fs.unlinkSync(videoFile.path);
 
+    console.log('🎉 Draft uploaded successfully');
+
     res.json({
       success: true,
       message: 'Video uploaded as draft',
       data: finalizeResponse.data.data,
     });
   } catch (error) {
-    console.error('Upload draft error:', error.response?.data || error.message);
+    console.error('❌ Upload draft error:', error.response?.data || error.message);
     if (req.file) {
       fs.unlinkSync(req.file.path);
     }
@@ -348,23 +374,34 @@ app.post('/api/tiktok/publish', upload.single('video'), async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { caption, hashtags } = req.body;
+    const { caption, hashtags, privacyLevel, disableDuet, disableComment, disableStitch } = req.body;
     const videoFile = req.file;
 
     if (!videoFile) {
       return res.status(400).json({ error: 'No video file provided' });
     }
 
+    console.log('🚀 Publish Started');
+    console.log(`   Caption: ${caption}`);
+    console.log(`   Hashtags: ${hashtags}`);
+    console.log(`   Privacy Level: ${privacyLevel}`);
+    console.log(`   Disable Duet: ${disableDuet}`);
+    console.log(`   Disable Comment: ${disableComment}`);
+    console.log(`   Disable Stitch: ${disableStitch}`);
+
     // Check token expiration and refresh if needed
     await refreshTokenIfNeeded(req.session);
 
     // Initialize video upload
+    const fileSize = fs.statSync(videoFile.path).size;
+    console.log(`   File Size: ${(fileSize / 1024 / 1024).toFixed(2)}MB`);
+
     const initUploadResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/video/upload/init/`,
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/post/publish/video/init/`,
       {
         source_info: {
           source: 'FILE_UPLOAD',
-          chunk_size: fs.statSync(videoFile.path).size,
+          chunk_size: fileSize,
         },
       },
       {
@@ -375,11 +412,12 @@ app.post('/api/tiktok/publish', upload.single('video'), async (req, res) => {
     );
 
     const uploadToken = initUploadResponse.data.data.upload_token;
+    console.log(`✅ Upload token received: ${uploadToken.substring(0, 20)}...`);
 
     // Upload video chunks
     const videoBuffer = fs.readFileSync(videoFile.path);
     await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/video/upload/parts/`,
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/post/publish/video/upload/`,
       videoBuffer,
       {
         headers: {
@@ -393,14 +431,27 @@ app.post('/api/tiktok/publish', upload.single('video'), async (req, res) => {
       }
     );
 
+    console.log('✅ Video chunk uploaded');
+
     // Finalize upload and publish
     const description = caption + (hashtags ? ' ' + hashtags : '');
+    const postInfo = {
+      title: description || 'Video',
+      privacy_level: privacyLevel || 'SELF_ONLY',
+      disable_duet: disableDuet === 'true' || disableDuet === true,
+      disable_comment: disableComment === 'true' || disableComment === true,
+      disable_stitch: disableStitch === 'true' || disableStitch === true,
+      video_cover_timestamp_ms: 1000,
+    };
+
+    console.log('📝 Post Info:', postInfo);
+
     const publishResponse = await axios.post(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/video/upload/finish/`,
+      `${TIKTOK_CONFIG.apiBaseUrl}/v2/post/publish/video/finish/`,
       {
         upload_token: uploadToken,
-        publish_type: 'PUBLISH_IMMEDIATELY', // Publish directly
-        description: description || '',
+        publish_type: 'PUBLISH_IMMEDIATELY',
+        post_info: postInfo,
       },
       {
         headers: {
@@ -409,8 +460,9 @@ app.post('/api/tiktok/publish', upload.single('video'), async (req, res) => {
       }
     );
 
-    // Clean up uploaded file
     fs.unlinkSync(videoFile.path);
+
+    console.log('🎉 Video published successfully');
 
     res.json({
       success: true,
@@ -418,7 +470,7 @@ app.post('/api/tiktok/publish', upload.single('video'), async (req, res) => {
       data: publishResponse.data.data,
     });
   } catch (error) {
-    console.error('Publish error:', error.response?.data || error.message);
+    console.error('❌ Publish error:', error.response?.data || error.message);
     if (req.file) {
       fs.unlinkSync(req.file.path);
     }

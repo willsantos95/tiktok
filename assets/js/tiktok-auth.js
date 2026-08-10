@@ -128,10 +128,11 @@ const TikTokAuth = {
   updateUIForAuthenticated(userInfo) {
     if (!userInfo) return;
 
-    // Update username displays
+    // Update username displays with @ prefix
     const usernameElements = document.querySelectorAll('#user-name, #tiktok-username');
     usernameElements.forEach(el => {
-      el.textContent = userInfo.displayName || '@user';
+      const displayName = userInfo.displayName || 'user';
+      el.textContent = displayName.startsWith('@') ? displayName : '@' + displayName;
     });
 
     // Show logout button

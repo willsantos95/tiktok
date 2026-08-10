@@ -113,6 +113,36 @@
                 <textarea id="caption-draft" placeholder="Add your video caption..." rows="3"></textarea>
               </div>
 
+              <div class="form-group">
+                <label for="privacy-draft">Privacy Level</label>
+                <select id="privacy-draft" required>
+                  <option value="SELF_ONLY">Apenas para mim (SELF_ONLY)</option>
+                  <option value="PUBLIC">Público (PUBLIC)</option>
+                  <option value="FRIENDS">Apenas amigos (FRIENDS)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disable-duet-draft" value="true">
+                  Desabilitar Duet
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disable-comment-draft" value="true">
+                  Desabilitar Comentários
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disable-stitch-draft" value="true">
+                  Desabilitar Stitch
+                </label>
+              </div>
+
               <div id="draft-status" class="status-message"></div>
 
               <button type="submit" class="button primary upload-btn">
@@ -166,8 +196,33 @@
               </div>
 
               <div class="form-group">
-                <label for="hashtags">Hashtags (optional)</label>
-                <input type="text" id="hashtags" placeholder="#trending #foryoupage" />
+                <label for="privacy-publish">Privacy Level</label>
+                <select id="privacy-publish" required>
+                  <option value="SELF_ONLY">Apenas para mim (SELF_ONLY)</option>
+                  <option value="PUBLIC">Público (PUBLIC)</option>
+                  <option value="FRIENDS">Apenas amigos (FRIENDS)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disable-duet-publish" value="true">
+                  Desabilitar Duet
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disable-comment-publish" value="true">
+                  Desabilitar Comentários
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="disable-stitch-publish" value="true">
+                  Desabilitar Stitch
+                </label>
               </div>
 
               <div id="publish-status" class="status-message"></div>

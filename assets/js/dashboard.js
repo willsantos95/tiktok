@@ -6,11 +6,18 @@ const Dashboard = {
     draft: {
       file: null,
       caption: '',
+      privacyLevel: 'SELF_ONLY',
+      disableDuet: false,
+      disableComment: false,
+      disableStitch: false,
     },
     publish: {
       file: null,
       caption: '',
-      hashtags: '',
+      privacyLevel: 'SELF_ONLY',
+      disableDuet: false,
+      disableComment: false,
+      disableStitch: false,
     },
   },
 
@@ -39,6 +46,34 @@ const Dashboard = {
       document.getElementById('caption-draft').addEventListener('input', (e) => {
         this.uploadState.draft.caption = e.target.value;
       });
+
+      const privacyDraft = document.getElementById('privacy-draft');
+      if (privacyDraft) {
+        privacyDraft.addEventListener('change', (e) => {
+          this.uploadState.draft.privacyLevel = e.target.value;
+        });
+      }
+
+      const disableDuetDraft = document.getElementById('disable-duet-draft');
+      if (disableDuetDraft) {
+        disableDuetDraft.addEventListener('change', (e) => {
+          this.uploadState.draft.disableDuet = e.target.checked;
+        });
+      }
+
+      const disableCommentDraft = document.getElementById('disable-comment-draft');
+      if (disableCommentDraft) {
+        disableCommentDraft.addEventListener('change', (e) => {
+          this.uploadState.draft.disableComment = e.target.checked;
+        });
+      }
+
+      const disableStitchDraft = document.getElementById('disable-stitch-draft');
+      if (disableStitchDraft) {
+        disableStitchDraft.addEventListener('change', (e) => {
+          this.uploadState.draft.disableStitch = e.target.checked;
+        });
+      }
     }
 
     // Publish form
@@ -59,6 +94,34 @@ const Dashboard = {
       document.getElementById('hashtags').addEventListener('input', (e) => {
         this.uploadState.publish.hashtags = e.target.value;
       });
+
+      const privacyPublish = document.getElementById('privacy-publish');
+      if (privacyPublish) {
+        privacyPublish.addEventListener('change', (e) => {
+          this.uploadState.publish.privacyLevel = e.target.value;
+        });
+      }
+
+      const disableDuetPublish = document.getElementById('disable-duet-publish');
+      if (disableDuetPublish) {
+        disableDuetPublish.addEventListener('change', (e) => {
+          this.uploadState.publish.disableDuet = e.target.checked;
+        });
+      }
+
+      const disableCommentPublish = document.getElementById('disable-comment-publish');
+      if (disableCommentPublish) {
+        disableCommentPublish.addEventListener('change', (e) => {
+          this.uploadState.publish.disableComment = e.target.checked;
+        });
+      }
+
+      const disableStitchPublish = document.getElementById('disable-stitch-publish');
+      if (disableStitchPublish) {
+        disableStitchPublish.addEventListener('change', (e) => {
+          this.uploadState.publish.disableStitch = e.target.checked;
+        });
+      }
     }
 
     // Modal controls
@@ -119,7 +182,7 @@ const Dashboard = {
   async handleDraftSubmit(e) {
     e.preventDefault();
 
-    const { file, caption } = this.uploadState.draft;
+    const { file, caption, privacyLevel, disableDuet, disableComment, disableStitch } = this.uploadState.draft;
     if (!file) return;
 
     // Validate file
@@ -129,23 +192,25 @@ const Dashboard = {
     }
 
     // Show loading status
-    this.showStatus('draft', 'loading', 'Preparing video upload...');
+    this.showStatus('draft', 'loading', 'Uploading to TikTok as draft...');
 
     try {
-      // Simulate upload to TikTok
-      await this.simulateDraftUpload(file, caption);
+      await this.simulateDraftUpload(file, caption, privacyLevel, disableDuet, disableComment, disableStitch);
 
-      // Show success message
       this.showStatus('draft', 'success', '✓ Video uploaded as draft! Check your TikTok app to review and publish.');
 
-      // Reset form
       document.getElementById('upload-draft-form').reset();
-      this.uploadState.draft = { file: null, caption: '' };
+      this.uploadState.draft = {
+        file: null,
+        caption: '',
+        privacyLevel: 'SELF_ONLY',
+        disableDuet: false,
+        disableComment: false,
+        disableStitch: false,
+      };
 
-      // Add to history
       this.recordPublication('draft', file.name, caption);
 
-      // Clear status after 3 seconds
       setTimeout(() => {
         this.clearStatus('draft');
       }, 4000);
@@ -223,7 +288,7 @@ const Dashboard = {
   async executePublish() {
     this.closeModal('preview-modal');
 
-    const { file, caption, hashtags } = this.uploadState.publish;
+    const { file, caption, hashtags, privacyLevel, disableDuet, disableComment, disableStitch } = this.uploadState.publish;
 
     // Show status modal
     this.showModal('status-modal');
@@ -231,17 +296,22 @@ const Dashboard = {
     document.getElementById('close-status').style.display = 'none';
 
     try {
-      // Simulate publishing to TikTok
-      await this.simulatePublish(file, caption, hashtags);
+      // Publish to TikTok
+      await this.simulatePublish(file, caption, hashtags, privacyLevel, disableDuet, disableComment, disableStitch);
 
-      // Show success
       document.getElementById('status-icon').textContent = '✅';
       document.getElementById('status-title').textContent = 'Video Published Successfully!';
       document.getElementById('status-message').textContent = 'Your video is now live on your TikTok profile.';
 
-      // Reset form
       document.getElementById('publish-form').reset();
-      this.uploadState.publish = { file: null, caption: '', hashtags: '' };
+      this.uploadState.publish = {
+        file: null,
+        caption: '',
+        privacyLevel: 'SELF_ONLY',
+        disableDuet: false,
+        disableComment: false,
+        disableStitch: false,
+      };
 
       // Add to history
       this.recordPublication('published', file.name, caption);
@@ -261,10 +331,14 @@ const Dashboard = {
   },
 
   // Upload draft to TikTok
-  async simulateDraftUpload(file, caption) {
+  async simulateDraftUpload(file, caption, privacyLevel, disableDuet, disableComment, disableStitch) {
     const formData = new FormData();
     formData.append('video', file);
     formData.append('caption', caption);
+    formData.append('privacyLevel', privacyLevel || 'SELF_ONLY');
+    formData.append('disableDuet', disableDuet);
+    formData.append('disableComment', disableComment);
+    formData.append('disableStitch', disableStitch);
 
     const response = await fetch('/api/tiktok/upload-draft', {
       method: 'POST',
@@ -281,11 +355,15 @@ const Dashboard = {
   },
 
   // Publish video to TikTok
-  async simulatePublish(file, caption, hashtags) {
+  async simulatePublish(file, caption, hashtags, privacyLevel, disableDuet, disableComment, disableStitch) {
     const formData = new FormData();
     formData.append('video', file);
     formData.append('caption', caption);
     formData.append('hashtags', hashtags);
+    formData.append('privacyLevel', privacyLevel || 'SELF_ONLY');
+    formData.append('disableDuet', disableDuet);
+    formData.append('disableComment', disableComment);
+    formData.append('disableStitch', disableStitch);
 
     const response = await fetch('/api/tiktok/publish', {
       method: 'POST',

@@ -170,7 +170,11 @@ app.get('/api/tiktok/callback', async (req, res) => {
     }
 
     console.log('✅ Access token received');
-    const { access_token, refresh_token, expires_in, open_id } = tokenResponse.data;
+    console.log(`   Full response: ${JSON.stringify(tokenResponse.data)}`);
+
+    // Handle both nested and flat response formats
+    const tokenData = tokenResponse.data.data || tokenResponse.data;
+    const { access_token, refresh_token, expires_in, open_id } = tokenData;
 
     console.log(`   Token length: ${access_token ? access_token.length : 0} chars`);
     console.log(`   Expires in: ${expires_in} seconds`);

@@ -26,7 +26,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'secret',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true },
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  },
 }));
 
 // Multer for file uploads
@@ -46,6 +51,36 @@ const TIKTOK_CONFIG = {
   sandbox: TIKTOK_SANDBOX,
 };
 
+// OAuth state store (temporary, valid for 10 minutes)
+const oauthStateStore = {};
+const OAUTH_STATE_TTL = 10 * 60 * 1000; // 10 minutes
+
+function storeOAuthState(state) {
+  oauthStateStore[state] = {
+    createdAt: Date.now(),
+  };
+  console.log(`💾 OAuth state stored: ${state}`);
+}
+
+function validateOAuthState(state) {
+  const stateData = oauthStateStore[state];
+  if (!stateData) {
+    console.log(`❌ OAuth state not found: ${state}`);
+    return false;
+  }
+
+  const age = Date.now() - stateData.createdAt;
+  if (age > OAUTH_STATE_TTL) {
+    console.log(`❌ OAuth state expired: ${state} (age: ${age}ms)`);
+    delete oauthStateStore[state];
+    return false;
+  }
+
+  delete oauthStateStore[state];
+  console.log(`✅ OAuth state validated and cleared: ${state}`);
+  return true;
+}
+
 // ============================================
 // OAUTH ENDPOINTS
 // ============================================
@@ -55,9 +90,8 @@ app.get('/api/tiktok/auth-url', (req, res) => {
   const scope = ['user.info.basic', 'video.upload', 'video.publish'];
   const state = Math.random().toString(36).substring(7);
 
-  // Store state in session for validation
-  req.session.oauthState = state;
-  req.session.save();
+  // Store state in memory store (works across instances)
+  storeOAuthState(state);
 
   const authUrl = new URL(TIKTOK_CONFIG.authorizationUrl);
   authUrl.searchParams.append('client_key', TIKTOK_CONFIG.clientKey);
@@ -70,6 +104,7 @@ app.get('/api/tiktok/auth-url', (req, res) => {
   console.log('🔐 OAuth Auth URL Generated:');
   console.log(`   Client Key: ${TIKTOK_CONFIG.clientKey}`);
   console.log(`   Redirect URI: ${TIKTOK_CONFIG.redirectUri}`);
+  console.log(`   State: ${state}`);
   console.log(`   Auth URL: ${authUrlString}`);
 
   res.json({ authUrl: authUrlString });
@@ -96,11 +131,13 @@ app.get('/api/tiktok/callback', async (req, res) => {
 
     // Validate code and state
     if (!code || !state) {
+      console.log(`❌ Missing parameters: code=${code ? 'yes' : 'no'}, state=${state ? 'yes' : 'no'}`);
       return res.redirect('/login.html?error=missing_parameters');
     }
 
-    // Validate state (CSRF protection)
-    if (state !== req.session.oauthState) {
+    // Validate state (CSRF protection) using memory store
+    if (!validateOAuthState(state)) {
+      console.log(`❌ State validation failed for: ${state}`);
       return res.redirect('/login.html?error=invalid_state');
     }
 

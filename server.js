@@ -12,6 +12,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 
 // Middleware
 app.use(cors({
@@ -398,7 +399,7 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 TikTok Video Publishing Backend`);
-  console.log(`📍 Running on http://localhost:${PORT}`);
+  console.log(`📍 Running on ${APP_URL}`);
   console.log(`🔐 TikTok OAuth configured`);
   console.log(`📤 Upload endpoint: POST /api/tiktok/upload-draft`);
   console.log(`🚀 Publish endpoint: POST /api/tiktok/publish`);

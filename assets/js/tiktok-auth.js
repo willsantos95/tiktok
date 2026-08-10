@@ -84,14 +84,19 @@ const TikTokAuth = {
     const isOnDashboard = currentPage === 'dashboard.html';
     const isOnLogin = currentPage === 'login.html';
 
+    console.log('🔍 Checking auth status on page:', currentPage);
+
     try {
       // Check with backend
       const response = await fetch(`${API_BASE_URL}/api/tiktok/user`, {
         credentials: 'include',
       });
 
+      console.log('📡 Auth check response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ User authenticated:', data.user);
         // User is authenticated
         this.updateUIForAuthenticated(data.user);
 
@@ -103,6 +108,7 @@ const TikTokAuth = {
         }
       } else {
         // User is not authenticated
+        console.log('❌ User not authenticated');
         this.updateUIForUnauthenticated();
 
         // If on dashboard, redirect to login
@@ -113,7 +119,7 @@ const TikTokAuth = {
         }
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('❌ Auth check error:', error);
       this.updateUIForUnauthenticated();
 
       if (isOnDashboard) {
@@ -128,11 +134,15 @@ const TikTokAuth = {
   updateUIForAuthenticated(userInfo) {
     if (!userInfo) return;
 
+    console.log('👤 Updating UI with user info:', userInfo);
+
     // Update username displays with @ prefix
     const usernameElements = document.querySelectorAll('#user-name, #tiktok-username');
     usernameElements.forEach(el => {
       const displayName = userInfo.displayName || 'user';
-      el.textContent = displayName.startsWith('@') ? displayName : '@' + displayName;
+      const formattedName = displayName.startsWith('@') ? displayName : '@' + displayName;
+      console.log(`   Setting ${el.id} to: ${formattedName}`);
+      el.textContent = formattedName;
     });
 
     // Show logout button
@@ -140,6 +150,8 @@ const TikTokAuth = {
     if (logoutBtn) {
       logoutBtn.style.display = 'block';
     }
+
+    console.log('✅ UI updated with user info');
   },
 
   // Update UI for unauthenticated user

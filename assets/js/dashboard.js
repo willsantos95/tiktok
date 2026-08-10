@@ -23,19 +23,27 @@ const Dashboard = {
 
   // Initialize dashboard
   init() {
+    console.log('🎨 Initializing Dashboard...');
+
     if (!TikTokAuth.isAuthenticated()) {
+      console.log('❌ Not authenticated, will be redirected');
       return; // Will be redirected by auth check
     }
 
+    console.log('✅ User authenticated, setting up dashboard');
     this.setupEventListeners();
     this.loadPublicationHistory();
+    console.log('✅ Dashboard initialized');
   },
 
   // Setup form event listeners
   setupEventListeners() {
+    console.log('🔌 Setting up event listeners...');
+
     // Draft upload form
     const draftForm = document.getElementById('upload-draft-form');
     if (draftForm) {
+      console.log('   ✅ Found draft form, attaching submit handler');
       draftForm.addEventListener('submit', (e) => this.handleDraftSubmit(e));
 
       document.getElementById('video-file-draft').addEventListener('change', (e) => {
@@ -79,6 +87,7 @@ const Dashboard = {
     // Publish form
     const publishForm = document.getElementById('publish-form');
     if (publishForm) {
+      console.log('   ✅ Found publish form, attaching submit handler');
       publishForm.addEventListener('submit', (e) => this.handlePublishSubmit(e));
 
       document.getElementById('video-file-publish').addEventListener('change', (e) => {
@@ -182,11 +191,22 @@ const Dashboard = {
   async handleDraftSubmit(e) {
     e.preventDefault();
 
+    console.log('📝 Draft form submitted');
+
     const { file, caption, privacyLevel, disableDuet, disableComment, disableStitch } = this.uploadState.draft;
-    if (!file) return;
+
+    console.log('   File:', file ? file.name : 'NO FILE');
+    console.log('   Caption:', caption);
+
+    if (!file) {
+      console.warn('⚠️ No file selected');
+      this.showStatus('draft', 'error', 'Please select a video file');
+      return;
+    }
 
     // Validate file
     if (!this.validateVideoFile(file)) {
+      console.warn('⚠️ Invalid file format');
       this.showStatus('draft', 'error', 'Invalid file format. Please use MP4, MOV, or WebM.');
       return;
     }
@@ -215,6 +235,7 @@ const Dashboard = {
         this.clearStatus('draft');
       }, 4000);
     } catch (error) {
+      console.error('❌ Draft upload error:', error);
       this.showStatus('draft', 'error', 'Upload failed: ' + error.message);
     }
   },
@@ -332,6 +353,11 @@ const Dashboard = {
 
   // Upload draft to TikTok
   async simulateDraftUpload(file, caption, privacyLevel, disableDuet, disableComment, disableStitch) {
+    console.log('📤 Starting draft upload...');
+    console.log('   File:', file.name, file.size, 'bytes');
+    console.log('   Caption:', caption);
+    console.log('   Privacy:', privacyLevel);
+
     const formData = new FormData();
     formData.append('video', file);
     formData.append('caption', caption);
@@ -340,18 +366,29 @@ const Dashboard = {
     formData.append('disableComment', disableComment);
     formData.append('disableStitch', disableStitch);
 
-    const response = await fetch('/api/tiktok/upload-draft', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-    });
+    try {
+      console.log('🌐 Sending request to /api/tiktok/upload-draft');
+      const response = await fetch('/api/tiktok/upload-draft', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.details || error.error || 'Upload failed');
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Upload error response:', error);
+        throw new Error(error.details || error.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      console.log('✅ Upload successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Upload failed:', error);
+      throw error;
     }
-
-    return response.json();
   },
 
   // Publish video to TikTok

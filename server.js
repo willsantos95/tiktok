@@ -174,14 +174,14 @@ app.get('/api/tiktok/callback', async (req, res) => {
 
     // Get user info
     console.log('👤 Fetching user information...');
-    const userResponse = await axios.get(
-      `${TIKTOK_CONFIG.apiBaseUrl}/v1/user/info/?fields=open_id,union_id,avatar_url,display_name`,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
-    );
+    const userInfoUrl = `${TIKTOK_CONFIG.apiBaseUrl}/v2/user/info/?fields=open_id,union_id,avatar_url,display_name`;
+    console.log(`   Endpoint: ${userInfoUrl}`);
+
+    const userResponse = await axios.get(userInfoUrl, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
 
     const userData = userResponse.data.data;
     console.log(`✅ User info retrieved: ${userData.display_name}`);
